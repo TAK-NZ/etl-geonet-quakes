@@ -22,20 +22,19 @@ const Env = Type.Object({
 });
 
 // Define a type for USGS GeoJSON features
-interface USGSFeature {
-    id: string;
-    properties: {
-        mag: number;
-        place: string;
-        time: number;
-        url: string;
-        [key: string]: unknown;
-    };
-    geometry: {
-        type: 'Point';
-        coordinates: [number, number, number?];
-    };
-}
+const USGSFeature = Type.Object({
+    id: Type.String(),
+    properties: Type.Object({
+        mag: Type.Number(),
+        place: Type.String(),
+        time: Type.Number(),
+        url: Type.String()
+    }),
+    geometry: Type.Object({
+        type: Type.Literal('Point'),
+        coordinates: Type.Array(Type.Number(), { minItems: 2, maxItems: 3 })
+    })
+});
 
 export default class Task extends ETL {
     static name = 'etl-earthquake';
@@ -50,7 +49,7 @@ export default class Task extends ETL {
             if (type === SchemaType.Input) {
                 return Env;
             } else {
-                return Type.Any();
+                return USGSFeature;
             }
         } else {
             return Type.Object({});
@@ -66,7 +65,7 @@ export default class Task extends ETL {
         const cotLifetimeSeconds = Number(env['CoT Lifetime Seconds']);
         const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson';
         const res = await fetch(url);
-        const body = await res.json() as { features: USGSFeature[] };
+        const body = await res.json() as { features: Static<typeof USGSFeature>[] };
         const now = Date.now();
         const features: Static<typeof InputFeatureCollection>["features"] = [];
         for (const feature of body.features) {
