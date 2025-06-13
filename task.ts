@@ -14,10 +14,6 @@ const Env = Type.Object({
     'Max Age Minutes': Type.String({
         description: 'Maximum age of displayed earthquakes in minutes. Maximum possible value is 7 days (10080 minutes).',
         default: '60'
-    }),
-    'CoT Lifetime Seconds': Type.String({
-        description: 'Lifetime of CoT markers in seconds',
-        default: '600'
     })
 });
 
@@ -25,6 +21,7 @@ const Env = Type.Object({
 const USGSFeature = Type.Object({
     id: Type.String(),
     properties: Type.Object({
+        title: Type.String(),        
         mag: Type.Number(),
         place: Type.String(),
         time: Type.Number(),
@@ -62,7 +59,6 @@ export default class Task extends ETL {
         const [minLat, maxLat, minLon, maxLon] = env['Bounding Box'].split(',').map(Number);
         const minMagnitude = Number(env['Min Magnitude']);
         const maxAgeMinutes = Number(env['Max Age Minutes']);
-        const cotLifetimeSeconds = Number(env['CoT Lifetime Seconds']);
         const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson';
         const res = await fetch(url);
         const body = await res.json() as { features: Static<typeof USGSFeature>[] };
@@ -90,24 +86,28 @@ export default class Task extends ETL {
                 id: `earthquake-${feature.id}`,
                 type: 'Feature',
                 properties: {
-                    callsign: 'M ' + mag.toFixed(1),
-                    // type: 'a-u-G', // 'a-f-X-i-g-e' isn't recognized by some CoT viewers,
+                    callsign: props.title,
                     type: 'a-f-X-i-g-e',
                     icon: 'f7f71666-8b28-4b57-9fbb-e38e61d33b79/Google/earthquake.png',
                     time: new Date(time).toISOString(),
                     start: new Date(time).toISOString(),
-                    stale: new Date(time + cotLifetimeSeconds * 1000).toISOString(),
                     remarks: [
                         `Magnitude: ${mag}`,
                         `Place: ${props.place}`,
                         `Time: ${new Date(time).toISOString()}`,
-                        `Depth: ${depth} km`,
-                        `More info: ${props.url}`
-                    ].join('\n')
+                        `Depth: ${depth} km`
+                    ].join('\n'),
+                    links: [{
+                        uid: feature.id,
+                        relation: 'r-u',
+                        mime: 'text/html',
+                        url: props.url,
+                        remarks: 'USGS Event Page'
+                    }]
                 },
                 geometry: {
                     type: "Point",
-                    coordinates: [lon, lat]
+                    coordinates: [lon, lat, -depth]
                 }
             });
         }
