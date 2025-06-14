@@ -25,6 +25,8 @@ const USGSFeature = Type.Object({
         mag: Type.Number(),
         place: Type.String(),
         time: Type.Number(),
+        type: Type.String(),
+        alert: Type.String(),
         url: Type.String()
     }),
     geometry: Type.Object({
@@ -69,6 +71,8 @@ export default class Task extends ETL {
             const coords = feature.geometry.coordinates;
             const mag = props.mag;
             const time = props.time;
+            const type = props.type;
+            const alert = props.alert || 'None';
             const lat = coords[1];
             const lon = coords[0];
             const depth = coords[2] || 0;
@@ -76,26 +80,53 @@ export default class Task extends ETL {
             const lonInBox = minLon <= maxLon
                 ? lon >= minLon && lon <= maxLon
                 : lon >= minLon || lon <= maxLon;
+            const alertLevel = (props.alert || 'none').toLowerCase();
+            const estimatedFatalities = {
+                'none': '0',
+                'green': '0',
+                'yellow': '1 - 99',
+                'orange': '100 - 999',
+                'red': '1,000+'
+            }[alertLevel] || '0';
+            const estimatedLosses = {
+                'none': '< $1 million',
+                'green': '< $1 million',
+                'yellow': '$1 million - $100 million',
+                'orange': '$100 million - $1 billion',
+                'red': '$1 billion+'
+            }[alertLevel] || '< $1 million';
+            const markerColor = {
+                'none': '#ffffff',
+                'green': '#00ff00',
+                'yellow': '#ffff00',
+                'orange': '#ff7f00',
+                'red': '#ff0000'
+            }[alertLevel] || '#ffffff';
             if (
                 mag < minMagnitude ||
                 lat < minLat || lat > maxLat ||
                 !lonInBox ||
-                (now - time) > maxAgeMinutes * 60 * 1000
+                (now - time) > maxAgeMinutes * 60 * 1000 ||
+                type !== 'earthquake'
             ) continue;
             features.push({
                 id: `earthquake-${feature.id}`,
                 type: 'Feature',
                 properties: {
                     callsign: props.title,
-                    type: 'a-f-X-i-g-e',
+                    type: 'a-o-X-i-g-e', // Other, Incident, Geophysical, Event
                     icon: 'f7f71666-8b28-4b57-9fbb-e38e61d33b79/Google/earthquake.png',
                     time: new Date(time).toISOString(),
                     start: new Date(time).toISOString(),
+                    'marker-color': markerColor,
                     remarks: [
                         `Magnitude: ${mag}`,
                         `Place: ${props.place}`,
                         `Time: ${new Date(time).toISOString()}`,
-                        `Depth: ${depth} km`
+                        `Depth: ${depth} km`,
+                        `Alert Level: ${props.alert || 'None'}`,
+                        `Estimated Fatalities: ${estimatedFatalities}`,
+                        `Estimated Losses: ${estimatedLosses}`
                     ].join('\n'),
                     links: [{
                         uid: feature.id,
