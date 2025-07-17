@@ -6,6 +6,10 @@
 
 [USGS](https://www.usgs.gov/programs/earthquake-hazards)
 
+## Example Data
+
+![Earthquake epicenter locations](docs/etl-earthquakes.png)
+
 ## Deployment
 
 Deployment into the CloudTAK environment for ETL tasks is done via automatic releases to the TAK.NZ AWS environment.
