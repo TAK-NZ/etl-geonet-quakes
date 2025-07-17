@@ -88,12 +88,12 @@ export default class Task extends ETL {
                 'red': '1,000+'
             }[alertLevel] || '0';
             const estimatedLosses = {
-                'none': '< $1 million',
-                'green': '< $1 million',
-                'yellow': '$1 million - $100 million',
-                'orange': '$100 million - $1 billion',
-                'red': '$1 billion+'
-            }[alertLevel] || '< $1 million';
+                'none': '< $1 million USD',
+                'green': '< $1 million USD',
+                'yellow': '$1 million USD - $100 million USD',
+                'orange': '$100 million USD - $1 billion USD',
+                'red': '$1 billion+ USD'
+            }[alertLevel] || '< $1 million USD';
             const markerColor = {
                 'none': '#ffffff',
                 'green': '#00ff00',
