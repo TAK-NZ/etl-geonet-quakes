@@ -1,10 +1,64 @@
-<h1 align='center'>ETL-Earthquakes</h1>
+# ETL-Earthquakes
 
-<p align='center'>Bring USGS Earthquake data into the TAK System</p>
+<p align='center'>Earthquake epicenter locations</p>
+
+## Data Source
+
+[USGS](https://www.usgs.gov/programs/earthquake-hazards)
+
+## Deployment
+
+Deployment into the CloudTAK environment for ETL tasks is done via automatic releases to the TAK.NZ AWS environment.
+
+Github actions will build and push docker releases on every version tag which can then be automatically configured via the
+CloudTAK API.
+
+### GitHub Actions Setup
+
+The workflow uses GitHub variables and secrets to make it reusable across different ETL repositories.
+
+#### Organization Variables (recommended)
+- `DEMO_STACK_NAME`: Name of the demo stack (default: "Demo")
+- `PROD_STACK_NAME`: Name of the production stack (default: "Prod")
+
+#### Organization Secrets (recommended)
+- `DEMO_AWS_ACCOUNT_ID`: AWS account ID for demo environment
+- `DEMO_AWS_REGION`: AWS region for demo environment
+- `DEMO_AWS_ROLE_ARN`: IAM role ARN for demo environment
+- `PROD_AWS_ACCOUNT_ID`: AWS account ID for production environment
+- `PROD_AWS_REGION`: AWS region for production environment
+- `PROD_AWS_ROLE_ARN`: IAM role ARN for production environment
+
+#### Repository Variables
+- `ETL_NAME`: Name of the ETL (default: repository name)
+
+#### Repository Secrets (alternative to organization secrets)
+- `AWS_ACCOUNT_ID`: AWS account ID for the environment
+- `AWS_REGION`: AWS region for the environment
+- `AWS_ROLE_ARN`: IAM role ARN for the environment
+
+These variables and secrets can be set in the GitHub organization or repository settings under Settings > Secrets and variables.
+
+### Manual Deployment
+
+For manual deployment you can use the `scripts/etl/deploy-etl.sh` script from the [CloudTAK](https://github.com/TAK-NZ/CloudTAK/) repo.
+As an example: 
+```
+../CloudTAK/scripts/etl/deploy-etl.sh Demo v1.0.0 --profile tak-nz-demo
+```
+
+### CloudTAK Configuration
+
+When registering this ETL as a task in CloudTAK:
+
+- Use the `<repo-name>.png` file in the main folder of this repository as the Task Logo
+- Use the raw GitHub URL of this README.md file as the Task Markdown Readme URL
+
+This will ensure proper visual identification and documentation for the task in the CloudTAK interface.
 
 ## Development
 
-DFPC provided Lambda ETLs are currently all written in [NodeJS](https://nodejs.org/en) through the use of a AWS Lambda optimized
+TAK.NZ provided Lambda ETLs are currently all written in [NodeJS](https://nodejs.org/en) through the use of a AWS Lambda optimized
 Docker container. Documentation for the Dockerfile can be found in the [AWS Help Center](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
 
 ```sh
@@ -21,7 +75,7 @@ When the ETL is deployed the `ETL_API` and `ETL_LAYER` variables will be provide
 }
 ```
 
-To run the task, ensure the local [CloudTAK](https://github.com/dfpc-coe/CloudTAK/) server is running and then run with typescript runtime
+To run the task, ensure the local [CloudTAK](https://github.com/TAK-NZ/CloudTAK/) server is running and then run with typescript runtime
 or build to JS and run natively with node
 
 ```
@@ -33,13 +87,3 @@ npm run build
 cp .env dist/
 node dist/task.js
 ```
-
-### Deployment
-
-Deployment into the CloudTAK environment for configuration is done via automatic releases to the DFPC AWS environment.
-
-Github actions will build and push docker releases on every version tag which can then be automatically configured via the
-CloudTAK API.
-
-Non-DFPC users will need to setup their own docker => ECS build system via something like Github Actions or AWS Codebuild.
-
