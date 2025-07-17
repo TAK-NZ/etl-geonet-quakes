@@ -72,7 +72,6 @@ export default class Task extends ETL {
             const mag = props.mag;
             const time = props.time;
             const type = props.type;
-            const alert = props.alert || 'None';
             const lat = coords[1];
             const lon = coords[0];
             const depth = coords[2] || 0;
