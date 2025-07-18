@@ -66,8 +66,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN || vars.DEMO_AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION || vars.DEMO_AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN || secrets.DEMO_AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || secrets.DEMO_AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -85,18 +85,18 @@ jobs:
           ECR_REPO_ARN=$(aws cloudformation list-exports \
               --query "Exports[?Name=='${ECR_EXPORT_NAME}'].Value" \
               --output text \
-              --region "${{ secrets.AWS_REGION || vars.DEMO_AWS_REGION }}")
+              --region "${{ secrets.AWS_REGION || secrets.DEMO_AWS_REGION }}")
           
           if [[ -z "$ECR_REPO_ARN" || "$ECR_REPO_ARN" == "None" ]]; then
               echo "Error: ETL ECR repository not found. Ensure BaseInfra stack is deployed."
               echo "Available exports:"
-              aws cloudformation list-exports --query "Exports[?contains(Name, 'ECR')].Name" --output table --region "${{ secrets.AWS_REGION || vars.DEMO_AWS_REGION }}"
+              aws cloudformation list-exports --query "Exports[?contains(Name, 'ECR')].Name" --output table --region "${{ secrets.AWS_REGION || secrets.DEMO_AWS_REGION }}"
               exit 1
           fi
           
           # Extract repository name from ARN
           ECR_REPO_NAME=$(echo "$ECR_REPO_ARN" | cut -d'/' -f2)
-          ECR_URI="${{ secrets.AWS_ACCOUNT_ID || vars.DEMO_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION || vars.DEMO_AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
+          ECR_URI="${{ secrets.AWS_ACCOUNT_ID || secrets.DEMO_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION || secrets.DEMO_AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
           
           # Build Docker image
           echo "Building Docker image..."
@@ -135,8 +135,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN || vars.PROD_AWS_ROLE_ARN }}
-          aws-region: ${{ secrets.AWS_REGION || vars.PROD_AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN || secrets.PROD_AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || secrets.PROD_AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -154,18 +154,18 @@ jobs:
           ECR_REPO_ARN=$(aws cloudformation list-exports \
               --query "Exports[?Name=='${ECR_EXPORT_NAME}'].Value" \
               --output text \
-              --region "${{ secrets.AWS_REGION || vars.PROD_AWS_REGION }}")
+              --region "${{ secrets.AWS_REGION || secrets.PROD_AWS_REGION }}")
           
           if [[ -z "$ECR_REPO_ARN" || "$ECR_REPO_ARN" == "None" ]]; then
               echo "Error: ETL ECR repository not found. Ensure BaseInfra stack is deployed."
               echo "Available exports:"
-              aws cloudformation list-exports --query "Exports[?contains(Name, 'ECR')].Name" --output table --region "${{ secrets.AWS_REGION || vars.PROD_AWS_REGION }}"
+              aws cloudformation list-exports --query "Exports[?contains(Name, 'ECR')].Name" --output table --region "${{ secrets.AWS_REGION || secrets.PROD_AWS_REGION }}"
               exit 1
           fi
           
           # Extract repository name from ARN
           ECR_REPO_NAME=$(echo "$ECR_REPO_ARN" | cut -d'/' -f2)
-          ECR_URI="${{ secrets.AWS_ACCOUNT_ID || vars.PROD_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION || vars.PROD_AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
+          ECR_URI="${{ secrets.AWS_ACCOUNT_ID || secrets.PROD_AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION || secrets.PROD_AWS_REGION }}.amazonaws.com/${ECR_REPO_NAME}"
           
           # Build Docker image
           echo "Building Docker image..."
