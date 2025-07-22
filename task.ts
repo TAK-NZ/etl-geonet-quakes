@@ -2,6 +2,35 @@ import { Static, Type, TSchema } from '@sinclair/typebox';
 import { fetch } from '@tak-ps/etl';
 import ETL, { Event, SchemaType, handler as internal, local, InvocationType, DataFlowType, InputFeatureCollection } from '@tak-ps/etl';
 
+// Constants for alert level mappings
+type AlertLevel = 'none' | 'green' | 'yellow' | 'orange' | 'red';
+
+const ALERT_COLORS: Record<AlertLevel, string> = {
+    'none': '#ffffff',
+    'green': '#00ff00',
+    'yellow': '#ffff00',
+    'orange': '#ff7f00',
+    'red': '#ff0000'
+};
+
+const ESTIMATED_FATALITIES: Record<AlertLevel, string> = {
+    'none': '0',
+    'green': '0',
+    'yellow': '1 - 99',
+    'orange': '100 - 999',
+    'red': '1,000+'
+};
+
+const ESTIMATED_LOSSES: Record<AlertLevel, string> = {
+    'none': '< $1 million USD',
+    'green': '< $1 million USD',
+    'yellow': '$1 million USD - $100 million USD',
+    'orange': '$100 million USD - $1 billion USD',
+    'red': '$1 billion+ USD'
+};
+
+const MAX_AGE_LIMIT = 10080; // 7 days in minutes
+
 const Env = Type.Object({
     'Min Magnitude': Type.String({
         description: 'Minimum earthquake magnitude to include',
@@ -56,16 +85,39 @@ export default class Task extends ETL {
     }
 
     async control() {
-        const env = await this.env(Env);
-        // Parse bounding box string
-        const [minLat, maxLat, minLon, maxLon] = env['Bounding Box'].split(',').map(Number);
-        const minMagnitude = Number(env['Min Magnitude']);
-        const maxAgeMinutes = Number(env['Max Age Minutes']);
-        const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson';
-        const res = await fetch(url);
-        const body = await res.json() as { features: Static<typeof USGSFeature>[] };
-        const now = Date.now();
-        const features: Static<typeof InputFeatureCollection>["features"] = [];
+        try {
+            const env = await this.env(Env);
+            
+            // Parse and validate input parameters
+            const [minLat, maxLat, minLon, maxLon] = env['Bounding Box'].split(',').map(Number);
+            if ([minLat, maxLat, minLon, maxLon].some(isNaN)) {
+                throw new Error('Invalid bounding box format. Expected: minLat,maxLat,minLon,maxLon');
+            }
+            
+            const minMagnitude = Number(env['Min Magnitude']);
+            if (isNaN(minMagnitude)) {
+                throw new Error('Invalid minimum magnitude value');
+            }
+            
+            let maxAgeMinutes = Number(env['Max Age Minutes']);
+            if (isNaN(maxAgeMinutes)) {
+                throw new Error('Invalid max age minutes value');
+            }
+            // Enforce maximum age limit
+            maxAgeMinutes = Math.min(maxAgeMinutes, MAX_AGE_LIMIT);
+            
+            console.log(`ok - Fetching earthquakes with magnitude >= ${minMagnitude} within bounding box [${minLat},${maxLat},${minLon},${maxLon}] from the last ${maxAgeMinutes} minutes`);
+            
+            const url = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson';
+            const res = await fetch(url);
+            
+            if (!res.ok) {
+                throw new Error(`Failed to fetch data: ${res.status} ${res.statusText}`);
+            }
+            
+            const body = await res.json() as { features: Static<typeof USGSFeature>[] };
+            const now = Date.now();
+            const features: Static<typeof InputFeatureCollection>["features"] = [];
         for (const feature of body.features) {
             const props = feature.properties;
             const coords = feature.geometry.coordinates;
@@ -75,32 +127,15 @@ export default class Task extends ETL {
             const lat = coords[1];
             const lon = coords[0];
             const depth = coords[2] || 0;
-            // Handle antimeridian-crossing bounding boxes
+            // Handle antimeridian-crossing bounding boxes (e.g., Pacific Ocean crossing 180° longitude)
             const lonInBox = minLon <= maxLon
                 ? lon >= minLon && lon <= maxLon
                 : lon >= minLon || lon <= maxLon;
-            const alertLevel = (props.alert || 'none').toLowerCase();
-            const estimatedFatalities = {
-                'none': '0',
-                'green': '0',
-                'yellow': '1 - 99',
-                'orange': '100 - 999',
-                'red': '1,000+'
-            }[alertLevel] || '0';
-            const estimatedLosses = {
-                'none': '< $1 million USD',
-                'green': '< $1 million USD',
-                'yellow': '$1 million USD - $100 million USD',
-                'orange': '$100 million USD - $1 billion USD',
-                'red': '$1 billion+ USD'
-            }[alertLevel] || '< $1 million USD';
-            const markerColor = {
-                'none': '#ffffff',
-                'green': '#00ff00',
-                'yellow': '#ffff00',
-                'orange': '#ff7f00',
-                'red': '#ff0000'
-            }[alertLevel] || '#ffffff';
+                
+            const alertLevel = (props.alert || 'none').toLowerCase() as AlertLevel;
+            const estimatedFatalities = ESTIMATED_FATALITIES[alertLevel as AlertLevel] || '0';
+            const estimatedLosses = ESTIMATED_LOSSES[alertLevel as AlertLevel] || '< $1 million USD';
+            const markerColor = ALERT_COLORS[alertLevel as AlertLevel] || '#ffffff';
             if (
                 mag < minMagnitude ||
                 lat < minLat || lat > maxLat ||
@@ -147,6 +182,10 @@ export default class Task extends ETL {
         };
         console.log(`ok - fetched ${features.length} earthquakes`);
         await this.submit(fc);
+        } catch (error) {
+            console.error(`Error in ETL process: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
     }
 }
 
