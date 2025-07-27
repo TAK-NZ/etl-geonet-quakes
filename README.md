@@ -1,10 +1,10 @@
-# ETL-Earthquakes
+# ETL-GeoNet-Quakes
 
 <p align='center'>Earthquake epicenter locations</p>
 
 ## Data Source
 
-[USGS](https://www.usgs.gov/programs/earthquake-hazards)
+[GeoNet](https://api.geonet.org.nz/)
 
 ## Example Data
 
