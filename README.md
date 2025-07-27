@@ -8,7 +8,7 @@
 
 ## Example Data
 
-![Earthquake epicenter locations](docs/etl-earthquakes.png)
+![Earthquake epicenter locations](docs/etl-geonet-quakes.png)
 
 ## Deployment
 
