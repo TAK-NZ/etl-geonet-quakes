@@ -10,7 +10,7 @@
         "test": "exit 0"
     },
     "author": "Christian Elsen <chris@elsen.nz>",
-    "license": "MIT",
+    "license": "AGPL-3.0-only",
     "devDependencies": {
         "@types/geojson": "^7946.0.10",
         "eslint": "^9.28.0",
