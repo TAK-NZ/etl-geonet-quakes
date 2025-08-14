@@ -1,5 +1,5 @@
 {
-    "name": "etl-earthquake",
+    "name": "etl-geonet-quakes",
     "type": "module",
     "version": "1.0.0",
     "description": "ETL to bring earthquake data into the TAK",
