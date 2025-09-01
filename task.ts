@@ -2,19 +2,19 @@ import { Static, Type, TSchema } from '@sinclair/typebox';
 import { fetch } from '@tak-ps/etl';
 import ETL, { Event, SchemaType, handler as internal, local, InvocationType, DataFlowType, InputFeatureCollection } from '@tak-ps/etl';
 
-// MMI color mapping from GeoNet CSS
-const MMI_COLORS: Record<number, string> = {
-    '-1': '#FFF7F3',
-    0: 'transparent',
-    1: '#FFF7F3',
-    2: '#FEEDDE',
-    3: '#FDD0A2',
-    4: '#FDAE6B',
-    5: '#FD8D3C',
-    6: '#F16913',
-    7: '#F03B20',
-    8: '#BD0026',
-    9: '#A30021'
+// MMI icon mapping
+const MMI_ICONS: Record<number, string> = {
+    1: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.25A.EarthquakeWeak.png',
+    2: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.25A.EarthquakeWeak.png',
+    3: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.25A.EarthquakeWeak.png',
+    4: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.25A.EarthquakeWeak.png',
+    5: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.26A.EarthquakeLight.png',
+    6: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.27A.EarthquakeModerate.png',
+    7: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.28A.EarthquakeStrong.png',
+    8: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.29A.EarthquakeSevere.png',
+    9: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.29A.EarthquakeSevere.png',
+    10: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.29A.EarthquakeSevere.png',
+    11: 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.29A.EarthquakeSevere.png'
 };
 
 // MMI intensity descriptions
@@ -125,10 +125,9 @@ export default class Task extends ETL {
                     properties: {
                         callsign: `M${props.magnitude.toFixed(1)} ${props.locality}`,
                         type: 'a-o-X-i-g-e', // Other, Incident, Geophysical, Event
-                        icon: 'ad78aafb-83a6-4c07-b2b9-a897a8b6a38f:Shapes/earthquake.png',
+                        icon: MMI_ICONS[props.mmi] || 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.24.Earthquake.png',
                         time: props.time,
                         start: props.time,
-                        'marker-color': MMI_COLORS[props.mmi] || '#000000',
                         remarks: [
                             `Magnitude: ${props.magnitude.toFixed(2)}`,
                             `MMI: ${props.mmi}`,
