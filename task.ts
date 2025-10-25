@@ -1,6 +1,6 @@
 import { Static, Type, TSchema } from '@sinclair/typebox';
 import { fetch } from '@tak-ps/etl';
-import ETL, { Event, SchemaType, handler as internal, local, InvocationType, DataFlowType, InputFeatureCollection } from '@tak-ps/etl';
+import ETL, { Event, SchemaType, handler as internal, local, InvocationType, DataFlowType } from '@tak-ps/etl';
 
 // MMI icon mapping
 const MMI_ICONS: Record<number, string> = {
@@ -105,7 +105,7 @@ export default class Task extends ETL {
             
             const body = await res.json() as { features: Static<typeof GeoNetFeature>[] };
             const now = Date.now();
-            const features: Static<typeof InputFeatureCollection>["features"] = [];
+            const features: object[] = [];
             
             for (const feature of body.features) {
                 const props = feature.properties;
@@ -145,12 +145,12 @@ export default class Task extends ETL {
                 });
             }
             
-            const fc: Static<typeof InputFeatureCollection> = {
+            const fc: { type: string; features: object[] } = {
                 type: 'FeatureCollection',
                 features
             };
             console.log(`ok - fetched ${features.length} earthquakes`);
-            await this.submit(fc);
+            await this.submit(fc as unknown as Parameters<typeof this.submit>[0]);
         } catch (error) {
             console.error(`Error in ETL process: ${error instanceof Error ? error.message : String(error)}`);
             throw error;
