@@ -128,6 +128,7 @@ export default class Task extends ETL {
                         icon: MMI_ICONS[props.mmi] || 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.24.Earthquake.png',
                         time: props.time,
                         start: props.time,
+                        stale: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
                         remarks: [
                             `Magnitude: ${props.magnitude.toFixed(2)}`,
                             `MMI: ${props.mmi}`,
