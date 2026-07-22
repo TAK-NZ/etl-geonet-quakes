@@ -129,6 +129,15 @@ export default class Task extends ETL {
                         time: props.time,
                         start: props.time,
                         stale: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+                        metadata: {
+                            magnitude: props.magnitude,
+                            mmi: props.mmi,
+                            intensity: MMI_INTENSITY[props.mmi] || 'Unknown',
+                            locality: props.locality,
+                            depth: props.depth,
+                            quality: props.quality,
+                            publicID: props.publicID
+                        },
                         remarks: [
                             `Magnitude: ${props.magnitude.toFixed(2)}`,
                             `MMI: ${props.mmi}`,
