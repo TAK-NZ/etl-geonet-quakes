@@ -127,14 +127,22 @@ function formatTimeAgo(eventTime: Date, now: number): string {
 
 /**
  * Format a UTC time string as NZ local time, e.g.
- * "02/08/2026 - 20:36 NZST (10 hours ago)"
+ * "02/08/2026, 20:36 NZST (10 hours ago)"
  */
 function formatNZLocalTime(timeUTC: string, now: number): string {
     const eventTime = new Date(timeUTC);
     const datePart = NZ_DATE_FORMAT.format(eventTime);
     const timePart = NZ_TIME_FORMAT.format(eventTime);
     const tzName = getNZTimeZoneName(eventTime);
-    return `${datePart} - ${timePart} ${tzName} (${formatTimeAgo(eventTime, now)})`;
+    return `${datePart}, ${timePart} ${tzName} (${formatTimeAgo(eventTime, now)})`;
+}
+
+/**
+ * Format an ISO 8601 UTC time string with an explicit " UTC" suffix instead
+ * of the "Z" designator, e.g. "2026-08-02T08:35:27.040 UTC"
+ */
+function formatUTCTime(timeUTC: string): string {
+    return `${timeUTC.replace(/Z$/, '')} UTC`;
 }
 
 export default class Task extends ETL {
@@ -235,7 +243,7 @@ export default class Task extends ETL {
                             `MMI: ${props.mmi}`,
                             `Intensity: ${MMI_INTENSITY[props.mmi] || 'Unknown'}`,
                             `Location: ${props.locality}`,
-                            `Time (UTC): ${props.time}`,
+                            `Time (UTC): ${formatUTCTime(props.time)}`,
                             `Time (NZ): ${timeLocal}`,
                             `Depth: ${depth.toFixed(1)} km`,
                             `Information Quality: ${props.quality}`
