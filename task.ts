@@ -48,7 +48,8 @@ const Env = Type.Object({
 // `metadata.<field>`.
 const GeoNetQuakeMetadata = Type.Object({
     publicID: Type.String(),
-    time: Type.String(),
+    timeUTC: Type.String(),
+    timeLocal: Type.String(),
     depth: Type.Number(),
     magnitude: Type.Number(),
     mmi: Type.Number(),
@@ -75,6 +76,65 @@ interface GeoNetFeature {
         type: 'Point';
         coordinates: number[];
     };
+}
+
+const NZ_DATE_FORMAT = new Intl.DateTimeFormat('en-NZ', {
+    timeZone: 'Pacific/Auckland',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+});
+const NZ_TIME_FORMAT = new Intl.DateTimeFormat('en-NZ', {
+    timeZone: 'Pacific/Auckland',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+});
+const NZ_TZ_NAME_FORMAT = new Intl.DateTimeFormat('en-NZ', {
+    timeZone: 'Pacific/Auckland',
+    timeZoneName: 'short'
+});
+
+/**
+ * Get the NZ timezone abbreviation (NZST or NZDT) for a given point in time
+ */
+function getNZTimeZoneName(eventTime: Date): string {
+    const part = NZ_TZ_NAME_FORMAT.formatToParts(eventTime)
+        .find(p => p.type === 'timeZoneName');
+    return part ? part.value : 'NZT';
+}
+
+/**
+ * Format a "time ago" string, using the largest whole unit that applies:
+ * minutes if under an hour, hours if under a day, otherwise days.
+ */
+function formatTimeAgo(eventTime: Date, now: number): string {
+    const diffMs = now - eventTime.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
+    }
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) {
+        return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+    }
+
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+}
+
+/**
+ * Format a UTC time string as NZ local time, e.g.
+ * "02/08/2026 - 20:36 NZST (10 hours ago)"
+ */
+function formatNZLocalTime(timeUTC: string, now: number): string {
+    const eventTime = new Date(timeUTC);
+    const datePart = NZ_DATE_FORMAT.format(eventTime);
+    const timePart = NZ_TIME_FORMAT.format(eventTime);
+    const tzName = getNZTimeZoneName(eventTime);
+    return `${datePart} - ${timePart} ${tzName} (${formatTimeAgo(eventTime, now)})`;
 }
 
 export default class Task extends ETL {
@@ -147,6 +207,8 @@ export default class Task extends ETL {
                 const lat = coords[1];
                 const depth = props.depth;
                 
+                const timeLocal = formatNZLocalTime(props.time, now);
+
                 features.push({
                     id: `earthquake-${props.publicID}`,
                     type: 'Feature',
@@ -164,14 +226,17 @@ export default class Task extends ETL {
                             locality: props.locality,
                             depth: props.depth,
                             quality: props.quality,
-                            publicID: props.publicID
+                            publicID: props.publicID,
+                            timeUTC: props.time,
+                            timeLocal
                         },
                         remarks: [
                             `Magnitude: ${props.magnitude.toFixed(2)}`,
                             `MMI: ${props.mmi}`,
                             `Intensity: ${MMI_INTENSITY[props.mmi] || 'Unknown'}`,
                             `Location: ${props.locality}`,
-                            `Time: ${props.time}`,
+                            `Time (UTC): ${props.time}`,
+                            `Time (NZ): ${timeLocal}`,
                             `Depth: ${depth.toFixed(1)} km`,
                             `Information Quality: ${props.quality}`
                         ].join('\n')
