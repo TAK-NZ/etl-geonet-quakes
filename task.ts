@@ -127,14 +127,14 @@ function formatTimeAgo(eventTime: Date, now: number): string {
 
 /**
  * Format a UTC time string as NZ local time, e.g.
- * "02/08/2026 - 20:36 NZST (10 hours ago)"
+ * "02/08/2026, 20:36 NZST (10 hours ago)"
  */
 function formatNZLocalTime(timeUTC: string, now: number): string {
     const eventTime = new Date(timeUTC);
     const datePart = NZ_DATE_FORMAT.format(eventTime);
     const timePart = NZ_TIME_FORMAT.format(eventTime);
     const tzName = getNZTimeZoneName(eventTime);
-    return `${datePart} - ${timePart} ${tzName} (${formatTimeAgo(eventTime, now)})`;
+    return `${datePart}, ${timePart} ${tzName} (${formatTimeAgo(eventTime, now)})`;
 }
 
 export default class Task extends ETL {
