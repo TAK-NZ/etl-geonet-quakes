@@ -1,4 +1,4 @@
-import { Static, Type, TSchema } from '@sinclair/typebox';
+import { Type, TSchema } from '@sinclair/typebox';
 import { fetch } from '@tak-ps/etl';
 import ETL, { Event, SchemaType, handler as internal, local, InvocationType, DataFlowType } from '@tak-ps/etl';
 
@@ -42,23 +42,40 @@ const Env = Type.Object({
     })
 });
 
-// Define a type for GeoNet GeoJSON features
-const GeoNetFeature = Type.Object({
-    type: Type.Literal('Feature'),
-    properties: Type.Object({
-        publicID: Type.String(),
-        time: Type.String(),
-        depth: Type.Number(),
-        magnitude: Type.Number(),
-        mmi: Type.Number(),
-        locality: Type.String(),
-        quality: Type.String()
-    }),
-    geometry: Type.Object({
-        type: Type.Literal('Point'),
-        coordinates: Type.Array(Type.Number(), { minItems: 2, maxItems: 3 })
-    })
+// Flat shape of the structured data exposed as `metadata` on each submitted
+// feature. This is what CloudTAK displays as the Layer Schema and what
+// downstream consumers (display-proxy templates, filters, etc.) query via
+// `metadata.<field>`.
+const GeoNetQuakeMetadata = Type.Object({
+    publicID: Type.String(),
+    time: Type.String(),
+    depth: Type.Number(),
+    magnitude: Type.Number(),
+    mmi: Type.Number(),
+    locality: Type.String(),
+    quality: Type.String(),
+    intensity: Type.String()
 });
+
+// Shape of a single GeoJSON Feature as returned by the GeoNet Quake API.
+// Used only to type-check/parse the incoming API response, not exposed
+// directly as the Layer Schema.
+interface GeoNetFeature {
+    type: 'Feature';
+    properties: {
+        publicID: string;
+        time: string;
+        depth: number;
+        magnitude: number;
+        mmi: number;
+        locality: string;
+        quality: string;
+    };
+    geometry: {
+        type: 'Point';
+        coordinates: number[];
+    };
+}
 
 export default class Task extends ETL {
     static name = 'etl-geonet-quakes';
@@ -73,7 +90,7 @@ export default class Task extends ETL {
             if (type === SchemaType.Input) {
                 return Env;
             } else {
-                return GeoNetFeature;
+                return GeoNetQuakeMetadata;
             }
         } else {
             return Type.Object({});
@@ -103,7 +120,7 @@ export default class Task extends ETL {
                 throw new Error(`Failed to fetch data: ${res.status} ${res.statusText}`);
             }
             
-            const body = await res.json() as { features: Static<typeof GeoNetFeature>[] };
+            const body = await res.json() as { features: GeoNetFeature[] };
             const now = Date.now();
             const features: object[] = [];
             
@@ -114,6 +131,17 @@ export default class Task extends ETL {
                 const ageMinutes = (now - eventTime) / (1000 * 60);
                 
                 if (ageMinutes > maxAgeMinutes) continue;
+
+                // GeoNet occasionally flags an auto-detected event as
+                // "deleted" after further review (reclassified as a quarry
+                // blast, duplicate detection, etc). Exclude it from this
+                // submission entirely rather than passing it through as an
+                // active earthquake — omitting a previously-submitted id
+                // from the features/uids array is how CloudTAK expires a
+                // feature, so a quake that gets deleted after we already
+                // published it will still be cleaned up correctly, just on
+                // the next run rather than this one.
+                if (props.quality === 'deleted') continue;
                 
                 const lon = coords[0];
                 const lat = coords[1];
