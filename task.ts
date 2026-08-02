@@ -137,14 +137,6 @@ function formatNZLocalTime(timeUTC: string, now: number): string {
     return `${datePart}, ${timePart} ${tzName} (${formatTimeAgo(eventTime, now)})`;
 }
 
-/**
- * Format an ISO 8601 UTC time string with an explicit " UTC" suffix instead
- * of the "Z" designator, e.g. "2026-08-02T08:35:27.040 UTC"
- */
-function formatUTCTime(timeUTC: string): string {
-    return `${timeUTC.replace(/Z$/, '')} UTC`;
-}
-
 export default class Task extends ETL {
     static name = 'etl-geonet-quakes';
     static flow = [ DataFlowType.Incoming ];
@@ -243,7 +235,7 @@ export default class Task extends ETL {
                             `MMI: ${props.mmi}`,
                             `Intensity: ${MMI_INTENSITY[props.mmi] || 'Unknown'}`,
                             `Location: ${props.locality}`,
-                            `Time (UTC): ${formatUTCTime(props.time)}`,
+                            `Time (UTC): ${props.time}`,
                             `Time (NZ): ${timeLocal}`,
                             `Depth: ${depth.toFixed(1)} km`,
                             `Information Quality: ${props.quality}`
