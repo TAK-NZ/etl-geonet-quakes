@@ -1,0 +1,27 @@
+{
+    "version": "1.0",
+    "name": "GeoNet Quakes",
+    "description": "Ingests recent earthquakes at or above a configurable Modified Mercalli Intensity from the GeoNet Quake API and posts them to the map as earthquake epicentre points with magnitude, intensity, depth and NZ local time details.",
+    "compute": {
+        "memory": 1024,
+        "timeout": 120
+    },
+    "permissions": [
+        {
+            "resource": "feature:submit",
+            "required": true,
+            "description": "Submits earthquake epicentre points to CloudTAK"
+        }
+    ],
+    "invocations": {
+        "incoming": {
+            "schedule": {
+                "description": "Polls the GeoNet Quake API for recent earthquakes on a schedule.",
+                "default": {
+                    "enabled": true,
+                    "schedule": "rate(2 minutes)"
+                }
+            }
+        }
+    }
+}

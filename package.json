@@ -1,13 +1,13 @@
 {
     "name": "etl-geonet-quakes",
     "type": "module",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "description": "ETL to bring earthquake data into the TAK",
     "main": "index.js",
     "scripts": {
-        "lint": "eslint *.ts",
+        "lint": "eslint *.ts test",
         "build": "tsc --build",
-        "test": "exit 0"
+        "test": "tsx --test test/*.test.ts"
     },
     "author": "Christian Elsen <chris@elsen.nz>",
     "license": "AGPL-3.0-only",
@@ -16,11 +16,15 @@
         "@types/geojson": "^7946.0.16",
         "eslint": "^10.8.0",
         "ts-node": "^10.9.2",
+        "tsx": "^4.23.15",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.65.0"
     },
     "dependencies": {
         "@sinclair/typebox": "^0.34.52",
-        "@tak-ps/etl": "^10.9.0"
+        "@tak-ps/etl": "^10.13.0"
+    },
+    "engines": {
+        "node": ">= 24"
     }
 }
