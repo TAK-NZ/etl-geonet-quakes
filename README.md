@@ -60,6 +60,27 @@ When registering this ETL as a task in CloudTAK:
 
 This will ensure proper visual identification and documentation for the task in the CloudTAK interface.
 
+### Capabilities Manifest
+
+`capabilities.json` in the root of this repository declares what the task needs from CloudTAK:
+
+- Compute: 1024 MB memory and a 120 second timeout
+- Permissions: `feature:submit` (required), as the task only calls `submit()` to post earthquake points
+- Invocations: incoming `schedule` only, defaulting to `rate(2 minutes)`
+
+The manifest is validated against `StaticCapabilitiesSchema` from `@tak-ps/etl` by `npm test`.
+
+On version tags (and manual dispatch) the GitHub workflow builds the image with `docker buildx` and embeds the manifest as the
+`com.cloudtak.capabilities` OCI annotation, so CloudTAK can read it directly from ECR. The annotation requires the
+`docker-container` builder provided by `docker/setup-buildx-action`. To inspect a pushed image:
+
+```sh
+docker buildx imagetools inspect <ecr-uri>:<tag> --raw | jq .annotations
+```
+
+The `cloudtak-etl` CLI from `@tak-ps/etl` is intentionally not used for the build, as it pushes to an ECR repository
+naming scheme that differs from the one used by TAK.NZ.
+
 ## Development
 
 TAK.NZ provided Lambda ETLs are currently all written in [NodeJS](https://nodejs.org/en) through the use of a AWS Lambda optimized
@@ -68,6 +89,8 @@ Docker container. Documentation for the Dockerfile can be found in the [AWS Help
 ```sh
 npm install
 ```
+
+Run `npm run lint`, `npm run build` and `npm test` before opening a PR.
 
 Add a .env file in the root directory that gives the ETL script the necessary variables to communicate with a local ETL server.
 When the ETL is deployed the `ETL_API` and `ETL_LAYER` variables will be provided by the Lambda Environment
