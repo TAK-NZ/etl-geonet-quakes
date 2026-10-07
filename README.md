@@ -70,7 +70,7 @@ This will ensure proper visual identification and documentation for the task in 
 
 The manifest is validated against `StaticCapabilitiesSchema` from `@tak-ps/etl` by `npm test`.
 
-On every version tag the GitHub workflow builds the image with `docker buildx` and embeds the manifest as the
+On version tags (and manual dispatch) the GitHub workflow builds the image with `docker buildx` and embeds the manifest as the
 `com.cloudtak.capabilities` OCI annotation, so CloudTAK can read it directly from ECR. The annotation requires the
 `docker-container` builder provided by `docker/setup-buildx-action`. To inspect a pushed image:
 
