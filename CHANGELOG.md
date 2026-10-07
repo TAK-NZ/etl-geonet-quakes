@@ -26,3 +26,4 @@
 - :pencil2: `package.json` was still at 1.1.2 although tags go up to v1.1.6; this release sets it to 1.2.0
 - :arrow_up: Update GitHub Actions to releases that run on Node.js 24, clearing the Node.js 20 deprecation warnings: `actions/checkout` v7, `actions/setup-node` v7 and `aws-actions/configure-aws-credentials` v6. `aws-actions/amazon-ecr-login` v2 already runs on Node.js 24. Not yet run in CI on these versions
 - :rocket: Pin the workflow runners to `ubuntu-24.04` instead of `ubuntu-latest`, so the `ubuntu-latest` migration to Ubuntu 26 (starting October 19, 2026) does not change the build environment unannounced
+- :pencil2: Document the capabilities manifest and the OCI annotation build in the README, and audit the manifest against the task's actual API use (only `submit()`, so `feature:submit`; incoming schedule only; `stale` is set explicitly to 5 minutes). Resolves TAK-NZ/CloudTAK#167
