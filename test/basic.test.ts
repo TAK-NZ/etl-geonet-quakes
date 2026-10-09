@@ -23,7 +23,9 @@ test('Incoming Input schema', async () => {
     assert.equal(schema.type, 'object');
     for (const key of [
         'MMI',
-        'Max Age Minutes'
+        'Max Age Minutes',
+        'Include Shaking Contours',
+        'Minimum Contour MMI'
     ]) {
         assert.ok(schema.properties[key], `Env schema missing property: ${key}`);
     }
@@ -32,6 +34,10 @@ test('Incoming Input schema', async () => {
     assert.equal(schema.properties['MMI'].default, '5');
     assert.equal(schema.properties['Max Age Minutes'].type, 'string');
     assert.equal(schema.properties['Max Age Minutes'].default, '10080');
+    assert.equal(schema.properties['Include Shaking Contours'].type, 'boolean');
+    assert.equal(schema.properties['Include Shaking Contours'].default, false);
+    assert.equal(schema.properties['Minimum Contour MMI'].type, 'string');
+    assert.equal(schema.properties['Minimum Contour MMI'].default, '3');
 });
 
 test('Incoming Output schema', async () => {

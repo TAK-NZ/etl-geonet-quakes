@@ -1,13 +1,13 @@
 {
     "name": "etl-geonet-quakes",
     "type": "module",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "ETL to bring earthquake data into the TAK",
     "main": "index.js",
     "scripts": {
         "lint": "eslint *.ts test",
         "build": "tsc --build",
-        "test": "tsx --test test/*.test.ts"
+        "test": "tsx --test --experimental-test-module-mocks test/*.test.ts"
     },
     "author": "Christian Elsen <chris@elsen.nz>",
     "license": "AGPL-3.0-only",

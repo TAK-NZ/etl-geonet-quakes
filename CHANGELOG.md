@@ -10,6 +10,14 @@
 
 ## Version History
 
+### v1.3.0
+- :tada: Optionally push GNS Science Shaking Layers MMI contour lines for every earthquake the ETL pushes, gated by a new `Include Shaking Contours` option (default off, no behaviour or network change when left off) and a `Minimum Contour MMI` option (default `3`) that drops contour lines below the chosen MMI level. Contours are re-fetched every run (no stale caching) and fetched concurrently with a small concurrency cap. A shakemap that is unavailable for an event (non-OK response, network error, timeout or invalid JSON) is skipped gracefully - logged as a warning, never blocking that event's point from being pushed
+- :bug: Fix GNS shaking-layer contour colors rendering incorrectly in CloudTAK: the source service styles contours with non-standard `color`/`weight` properties, which CloudTAK ignores. Map `color` to simplestyle `stroke`, `weight` to `stroke-width`, and set `stroke-opacity` to `1`; `color`/`weight` are no longer passed through
+- :white_check_mark: Add unit tests for the new `fetchQuakeContours`/`buildContourFeatures` helpers in `task.ts`, covering style mapping, minimum-MMI filtering, id format, graceful handling of HTTP errors/invalid JSON/network failures (via `node:test`'s experimental module mocking), and that the toggle being off results in zero contour fetches
+- :bug: Split each contour `MultiLineString` into one `LineString` feature per part (ids `earthquake-<publicID>-mmi-<value>-<n>`), because CloudTAK's CoT endpoint only accepts Point/LineString/Polygon geometries and rejected the whole POST (400 Validation Error) when contours were included
+- :pencil2: Document the two new options and the contour data source in the README
+- :sparkles: `Include Shaking Contours` is a boolean toggle in CloudTAK rather than a free-text field
+
 ### v1.2.0
 - :tada: Add a `capabilities.json` manifest so CloudTAK can read the task's requirements from the image. It declares a single required permission, `feature:submit` (the only CloudTAK API the task uses is `submit()`), 1024 MB memory / 120 s timeout, and a default `rate(2 minutes)` schedule. The schedule and compute values are judgement calls (nothing in the repo specifies them; features go stale after 5 minutes). The manifest is validated against `StaticCapabilitiesSchema` from `@tak-ps/etl` by a test
 - :rocket: Build and push the image with `docker buildx` in the demo and production deploy jobs, embedding `capabilities.json` as the `com.cloudtak.capabilities` OCI annotation, with `docker/setup-buildx-action@v4` providing the `docker-container` builder the annotation needs. This only runs on version tags / manual dispatch, so it has not been exercised in CI or in the demo environment
