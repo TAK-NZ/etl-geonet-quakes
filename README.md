@@ -6,6 +6,24 @@
 
 [GeoNet](https://api.geonet.org.nz/)
 
+Optionally, [GNS Science Shaking Layers](https://shakinglayers.geonet.org.nz/) MMI shaking contour lines for each
+pushed earthquake.
+
+## Configuration
+
+- `MMI`: Minimum Modified Mercalli Intensity (-1 to 8). Default `5`
+- `Max Age Minutes`: Maximum age of displayed earthquakes in minutes. Default `10080`
+- `Include Shaking Contours`: Also push GNS shaking-layer MMI contour lines for each earthquake. Default `false`
+- `Minimum Contour MMI`: Only emit shaking contour lines with MMI value at or above this (1-12, half-steps allowed).
+  Only used when `Include Shaking Contours` is enabled. Default `3`
+
+When `Include Shaking Contours` is enabled, the ETL fetches the MMI contour lines for every earthquake it actually
+pushes (same filtering as the quake points) from the GNS Science Shaking Layers service and submits one line feature
+per MMI level, re-fetched on every run. A shakemap that is not yet available for an event (or any other fetch
+failure) is skipped gracefully - contours for that event are simply omitted, and the quake point is still pushed as
+normal. The source service's own `color`/`weight` styling is mapped to the simplestyle `stroke`/`stroke-width`/
+`stroke-opacity` properties CloudTAK actually uses for line rendering, so contour colors display correctly.
+
 ## Example Data
 
 ![Earthquake epicenter locations](docs/etl-geonet-quakes.png)

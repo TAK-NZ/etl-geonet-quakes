@@ -1,6 +1,7 @@
 import { Type, TSchema } from '@sinclair/typebox';
 import { fetch } from '@tak-ps/etl';
 import ETL, { Event, SchemaType, handler as internal, local, InvocationType, DataFlowType } from '@tak-ps/etl';
+import type { Feature, LineString, MultiLineString, Position } from 'geojson';
 
 // MMI icon mapping
 const MMI_ICONS: Record<number, string> = {
@@ -39,6 +40,14 @@ const Env = Type.Object({
     'Max Age Minutes': Type.String({
         description: 'Maximum age of displayed earthquakes in minutes',
         default: '10080'
+    }),
+    'Include Shaking Contours': Type.Boolean({
+        description: 'Also push GNS shaking-layer MMI contour lines for each earthquake',
+        default: false
+    }),
+    'Minimum Contour MMI': Type.String({
+        description: 'Only emit shaking contour lines with MMI value at or above this (1-12, half-steps allowed). Only used when Include Shaking Contours is enabled',
+        default: '3'
     })
 });
 
@@ -76,6 +85,101 @@ interface GeoNetFeature {
         type: 'Point';
         coordinates: number[];
     };
+}
+
+// Properties on a single contour feature as returned by the GNS Science
+// Shaking Layers service. `color`/`weight` are the service's own styling
+// hints, not simplestyle - they must be mapped to `stroke`/`stroke-width`
+// before being submitted, otherwise CloudTAK ignores them and renders the
+// contour with its default (broken) styling.
+interface ContourSourceProps {
+    value: number;
+    units: string;
+    color: string;
+    weight: number;
+}
+
+/**
+ * Fetch the GNS shaking-layer MMI contour lines for a quake.
+ *
+ * Returns the raw GeoJSON features unchanged (MultiLineString, one per MMI
+ * level). Any non-OK response, network error, timeout or invalid JSON is
+ * handled gracefully - this never throws, so a missing/unavailable shakemap
+ * for one event can never block submission of the quake points.
+ */
+export async function fetchQuakeContours(publicID: string): Promise<Feature[]> {
+    const url = `https://shakinglayers.geonet.org.nz/ws/download/${publicID}/latest/shakemap/intensity_mmi_contour_lines.json`;
+
+    try {
+        const res = await fetch(url, { timeout: 10000 });
+
+        if (!res.ok) {
+            console.warn(`warn - no contours for ${publicID}: ${res.status} ${res.statusText}`);
+            return [];
+        }
+
+        const body = await res.json() as { features: Feature[] };
+        return body.features || [];
+    } catch (error) {
+        console.warn(`warn - no contours for ${publicID}: ${error instanceof Error ? error.message : String(error)}`);
+        return [];
+    }
+}
+
+/**
+ * Map raw GNS shaking-layer contour features to CloudTAK-ready features.
+ *
+ * Drops any feature below `minMMI`. Source `color`/`weight` are mapped to
+ * the simplestyle `stroke`/`stroke-width`/`stroke-opacity` properties that
+ * TAK/CloudTAK actually use for line styling - `color`/`weight` are NOT
+ * copied through, as leaving them in place is what causes CloudTAK to fall
+ * back to its default (incorrect) contour colors.
+ */
+export function buildContourFeatures(
+    publicID: string,
+    raw: Feature[],
+    minMMI: number,
+    staleISO: string
+): object[] {
+    const features: object[] = [];
+
+    for (const feature of raw) {
+        const props = feature.properties as unknown as ContourSourceProps;
+        if (!props || props.value < minMMI) continue;
+
+        // CloudTAK's CoT endpoint only accepts Point/LineString/Polygon
+        // geometries (MultiLineString fails schema validation for the whole
+        // POST), so each part of a MultiLineString becomes its own LineString
+        // feature with a stable per-part id.
+        const geometry = feature.geometry as LineString | MultiLineString;
+        const parts: Position[][] = geometry.type === 'MultiLineString'
+            ? geometry.coordinates
+            : [geometry.coordinates];
+
+        parts.forEach((coordinates, i) => {
+            if (coordinates.length < 2) return;
+
+            features.push({
+                id: `earthquake-${publicID}-mmi-${props.value}-${i + 1}`,
+                type: 'Feature',
+                properties: {
+                    callsign: `MMI ${props.value}`,
+                    stroke: props.color,
+                    'stroke-width': props.weight,
+                    'stroke-opacity': 1,
+                    stale: staleISO,
+                    remarks: [
+                        `MMI: ${props.value}`,
+                        'Source: GNS Science Shaking Layers',
+                        `Event: ${publicID}`
+                    ].join('\n')
+                },
+                geometry: { type: 'LineString', coordinates }
+            });
+        });
+    }
+
+    return features;
 }
 
 const NZ_DATE_FORMAT = new Intl.DateTimeFormat('en-NZ', {
@@ -170,8 +274,17 @@ export default class Task extends ETL {
             if (isNaN(maxAgeMinutes)) {
                 throw new Error('Invalid max age minutes value');
             }
-            
+
+            const includeContours = env['Include Shaking Contours'] === true;
+            const minContourMMI = Number(env['Minimum Contour MMI']);
+            if (includeContours && (isNaN(minContourMMI) || minContourMMI < 1 || minContourMMI > 12)) {
+                throw new Error('Invalid Minimum Contour MMI value. Must be between 1 and 12');
+            }
+
             console.log(`ok - Fetching earthquakes with MMI >= ${mmi} from the last ${maxAgeMinutes} minutes`);
+            if (includeContours) {
+                console.log(`ok - Including shaking contour lines with MMI >= ${minContourMMI}`);
+            }
             
             const url = `https://api.geonet.org.nz/quake?MMI=${mmi}`;
             const res = await fetch(url);
@@ -183,6 +296,7 @@ export default class Task extends ETL {
             const body = await res.json() as { features: GeoNetFeature[] };
             const now = Date.now();
             const features: object[] = [];
+            const pushedIDs: string[] = [];
             
             for (const feature of body.features) {
                 const props = feature.properties;
@@ -246,6 +360,28 @@ export default class Task extends ETL {
                         coordinates: [lon, lat, -depth]
                     }
                 });
+
+                pushedIDs.push(props.publicID);
+            }
+
+            if (includeContours && pushedIDs.length) {
+                // Mirrors the quake points' stale value exactly, computed once
+                // so every contour feature for this run shares the same
+                // expiry regardless of how long the fetches below take.
+                const contourStale = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+                // Fetch contours with a small concurrency cap rather than all
+                // at once, to avoid hammering the shaking-layers service.
+                const CONCURRENCY = 5;
+                for (let i = 0; i < pushedIDs.length; i += CONCURRENCY) {
+                    const batch = pushedIDs.slice(i, i + CONCURRENCY);
+                    const batchResults = await Promise.all(
+                        batch.map(id => fetchQuakeContours(id))
+                    );
+                    for (let j = 0; j < batch.length; j++) {
+                        features.push(...buildContourFeatures(batch[j], batchResults[j], minContourMMI, contourStale));
+                    }
+                }
             }
             
             const fc: { type: string; features: object[] } = {
