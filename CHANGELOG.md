@@ -10,6 +10,11 @@
 
 ## Version History
 
+### v1.3.1
+- :bug: Shaking contour lines now expire. They were sent as `u-d-f` drawings (no `type`), which ATAK never expires, so contours of old quakes stayed on the map. They are now sent with the earthquake point's marker type (`a-o-X-i-g-e`), so CloudTAK (`@tak-ps/node-cot` >= 14.58.0) converts them into a marker CoT with a `<shape><polyline>` and ATAK removes the line together with the marker at `stale`
+- :bug: The contour marker is invisible (`marker-color` with `marker-opacity: 0`, written as `<color argb>` with alpha 0), otherwise ATAK draws an unknown-type "?" on it. It must not carry an `icon`: a valid `usericon` makes ATAK move the marker to another map group, which deletes the line it owns. The quake icon stays on the earthquake point
+- :white_check_mark: Test the contour type, hidden marker and conversion through `CoTParser.from_geojson` (adds `@tak-ps/node-cot` as a devDependency)
+- :arrow_up: `npm audit fix`, `npm audit` reports 0 vulnerabilities
 ### v1.3.0
 - :tada: Optionally push GNS Science Shaking Layers MMI contour lines for every earthquake the ETL pushes, gated by a new `Include Shaking Contours` option (default off, no behaviour or network change when left off) and a `Minimum Contour MMI` option (default `3`) that drops contour lines below the chosen MMI level. Contours are re-fetched every run (no stale caching) and fetched concurrently with a small concurrency cap. A shakemap that is unavailable for an event (non-OK response, network error, timeout or invalid JSON) is skipped gracefully - logged as a warning, never blocking that event's point from being pushed
 - :bug: Fix GNS shaking-layer contour colors rendering incorrectly in CloudTAK: the source service styles contours with non-standard `color`/`weight` properties, which CloudTAK ignores. Map `color` to simplestyle `stroke`, `weight` to `stroke-width`, and set `stroke-opacity` to `1`; `color`/`weight` are no longer passed through
