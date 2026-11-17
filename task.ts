@@ -184,6 +184,7 @@ export function buildContourFeatures(
                 id: `earthquake-${publicID}-mmi-${props.value}-${i + 1}`,
                 type: 'Feature',
                 properties: {
+                    marti_archive: false,
                     callsign: `MMI ${props.value}`,
                     type: CONTOUR_TYPE,
                     ...HIDDEN_MARKER_PROPERTIES,
@@ -350,6 +351,10 @@ export default class Task extends ETL {
                     id: `earthquake-${props.publicID}`,
                     type: 'Feature',
                     properties: {
+                        // Emitted as <marti archive="false"> so TAK Server does
+                        // not archive these periodically refreshed quakes
+                        // (needs node-cot >= 14.57.1)
+                        marti_archive: false,
                         callsign: `M${props.magnitude.toFixed(1)} ${props.locality}`,
                         type: 'a-o-X-i-g-e', // Other, Incident, Geophysical, Event
                         icon: MMI_ICONS[props.mmi] || 'bb4df0a6-ca8d-4ba8-bb9e-3deb97ff015e:NaturalHazards/NH.24.Earthquake.png',

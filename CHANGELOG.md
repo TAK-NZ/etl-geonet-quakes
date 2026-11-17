@@ -10,6 +10,11 @@
 
 ## Version History
 
+### v1.3.2
+- :rocket: Earthquake points and shaking contour lines are emitted with `marti_archive: false` (`<marti archive="false">`), so TAK Server no longer archives these periodically refreshed features (needs `@tak-ps/node-cot` >= 14.57.1)
+- :white_check_mark: Test that points and contours carry `marti_archive: false`
+- :pencil2: Updated `docs/etl-geonet-quakes.png`
+- :arrow_up: `npm audit --production` reports 0 vulnerabilities. Full `npm audit` still lists `picomatch` (dev-only, via `typescript-eslint`): the advisory covers all versions up to the latest, 4.0.7, and no patched release exists yet
 ### v1.3.1
 - :bug: Shaking contour lines now expire. They were sent as `u-d-f` drawings (no `type`), which ATAK never expires, so contours of old quakes stayed on the map. They are now sent with the earthquake point's marker type (`a-o-X-i-g-e`), so CloudTAK (`@tak-ps/node-cot` >= 14.58.0) converts them into a marker CoT with a `<shape><polyline>` and ATAK removes the line together with the marker at `stale`
 - :bug: The contour marker is invisible (`marker-color` with `marker-opacity: 0`, written as `<color argb>` with alpha 0), otherwise ATAK draws an unknown-type "?" on it. It must not carry an `icon`: a valid `usericon` makes ATAK move the marker to another map group, which deletes the line it owns. The quake icon stays on the earthquake point
