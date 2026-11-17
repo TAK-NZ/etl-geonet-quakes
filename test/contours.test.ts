@@ -147,6 +147,7 @@ test('buildContourFeatures uses the earthquake point marker type, not a u-d-f dr
         assert.ok(!String(feature.properties.type).startsWith('u-'));
         assert.equal(feature.properties.icon, undefined, 'a usericon would make ATAK delete the line');
         assert.equal(feature.properties['marker-opacity'], 0);
+        assert.strictEqual(feature.properties.marti_archive, false);
     }
 });
 test('A contour converts to an invisible, expiring marker with a polyline', async () => {

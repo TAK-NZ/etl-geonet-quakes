@@ -46,6 +46,7 @@ const fakeLayer = {
     }
 };
 
+const posted: Array<{ properties: Record<string, unknown> }> = [];
 const server = createServer((req, res) => {
     if (req.method === 'GET' && req.url === '/api/layer/1') {
         res.writeHead(200, { 'content-type': 'application/json' });
@@ -54,8 +55,13 @@ const server = createServer((req, res) => {
     }
 
     if (req.method === 'POST' && req.url?.startsWith('/api/layer/1/cot')) {
-        res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ status: 'ok' }));
+        let raw = '';
+        req.on('data', chunk => { raw += chunk; });
+        req.on('end', () => {
+            posted.push(...JSON.parse(raw).features);
+            res.writeHead(200, { 'content-type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok' }));
+        });
         return;
     }
 
@@ -121,4 +127,11 @@ test('Include Shaking Contours defaults to false, so control() makes zero contou
     assert.equal(contourCalls, 0, 'no contour fetches should occur when the toggle is off');
 
     server.close();
+});
+
+test('Earthquake points are submitted with marti_archive false', () => {
+    assert.ok(posted.length > 0, 'a feature was submitted');
+    for (const feat of posted) {
+        assert.strictEqual(feat.properties.marti_archive, false);
+    }
 });
