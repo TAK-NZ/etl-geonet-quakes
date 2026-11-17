@@ -137,3 +137,30 @@ test('buildContourFeatures sets stale and callsign', () => {
     assert.equal(features[0].properties.callsign, 'MMI 1');
     assert.equal(features[1].properties.callsign, 'MMI 1.5');
 });
+test('buildContourFeatures uses the earthquake point marker type, not a u-d-f drawing', async () => {
+    const { CONTOUR_TYPE } = await import('../task.js');
+    const features = buildContourFeatures('2026p742111', SAMPLE_RAW_FEATURES, 1, STALE_ISO) as Array<{
+        properties: Record<string, unknown>;
+    }>;
+    for (const feature of features) {
+        assert.equal(feature.properties.type, CONTOUR_TYPE);
+        assert.ok(!String(feature.properties.type).startsWith('u-'));
+        assert.equal(feature.properties.icon, undefined, 'a usericon would make ATAK delete the line');
+        assert.equal(feature.properties['marker-opacity'], 0);
+    }
+});
+test('A contour converts to an invisible, expiring marker with a polyline', async () => {
+    const { CoTParser } = await import('@tak-ps/node-cot');
+    const [feature] = buildContourFeatures('2026p742111', SAMPLE_RAW_FEATURES, 1, STALE_ISO);
+    const event = (await CoTParser.from_geojson(feature as never)).raw.event;
+    // A u-d-f drawing would never expire in ATAK
+    assert.equal(event._attributes.type, 'a-o-X-i-g-e');
+    assert.equal(event._attributes.stale, STALE_ISO);
+    const polyline = event.detail.shape?.polyline;
+    assert.ok(polyline, 'detail.shape.polyline is set');
+    assert.notEqual(polyline._attributes?.closed, true, 'a contour is an open line');
+    assert.equal(event.detail.usericon, undefined);
+    const argb = Number(event.detail.color?._attributes?.argb);
+    assert.ok(Number.isFinite(argb));
+    assert.equal((argb >>> 24) & 0xff, 0);
+});

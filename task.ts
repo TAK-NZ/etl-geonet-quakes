@@ -127,6 +127,27 @@ export async function fetchQuakeContours(publicID: string): Promise<Feature[]> {
 }
 
 /**
+ * Properties that make a contour marker invisible in ATAK.
+ *
+ * CloudTAK (node-cot >= 14.58.0) turns a LineString with a marker `type` into
+ * a marker CoT with a `<shape><polyline>`. ATAK removes the line together with
+ * that marker once `stale` passes, unlike a `u-d-f` drawing, which never
+ * expires. The marker has no icon, so ATAK would draw an unknown-type "?" on
+ * it: alpha 0 (`<color argb>`) hides that.
+ *
+ * Do NOT give a contour an `icon`: a valid `usericon` makes ATAK move the
+ * marker to another map group, which deletes the line it owns. The quake icon
+ * stays on the earthquake point.
+ */
+export const HIDDEN_MARKER_PROPERTIES = {
+    'marker-color': '#808080',
+    'marker-opacity': 0
+} as const;
+
+/** Same marker type as the earthquake point, not a `u-*` drawing type */
+export const CONTOUR_TYPE = 'a-o-X-i-g-e';
+
+/**
  * Map raw GNS shaking-layer contour features to CloudTAK-ready features.
  *
  * Drops any feature below `minMMI`. Source `color`/`weight` are mapped to
@@ -164,6 +185,8 @@ export function buildContourFeatures(
                 type: 'Feature',
                 properties: {
                     callsign: `MMI ${props.value}`,
+                    type: CONTOUR_TYPE,
+                    ...HIDDEN_MARKER_PROPERTIES,
                     stroke: props.color,
                     'stroke-width': props.weight,
                     'stroke-opacity': 1,
