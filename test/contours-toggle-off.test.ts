@@ -15,6 +15,7 @@ const fakeLayer = {
     connection: null,
     username: null,
     uuid: 'test-uuid',
+    permissions: [],
     name: 'etl-geonet-quakes',
     description: 'test layer',
     enabled: true,

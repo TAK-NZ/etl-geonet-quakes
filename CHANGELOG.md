@@ -10,6 +10,10 @@
 
 ## Version History
 
+### v1.3.3
+- :arrow_up: Update `@tak-ps/etl` to `^11.4.0`. CloudTAK v14 requires ETLs to be on ETL-Base v11 or higher. v11 publishes Output schemas as named schemas, so this task needed no change for that, and the release also works with CloudTAK v13
+- :arrow_up: Update the other dependencies within their existing ranges, which clears the `npm audit --production` findings that the deploy workflow checks
+- :white_check_mark: Test fixture for the contour toggle now includes the `permissions` field that CloudTAK v14 and `@tak-ps/etl` v11 require in a Layer response
 ### v1.3.2
 - :rocket: Earthquake points and shaking contour lines are emitted with `marti_archive: false` (`<marti archive="false">`), so TAK Server no longer archives these periodically refreshed features (needs `@tak-ps/node-cot` >= 14.57.1)
 - :white_check_mark: Test that points and contours carry `marti_archive: false`
